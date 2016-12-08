@@ -5,7 +5,6 @@ import "./alfred"
 import "encoding/json"
 import "fmt"
 import "net/http"
-import "os"
 import "strconv"
 
 type Post struct {
@@ -14,23 +13,24 @@ type Post struct {
 	Title  string
 }
 
-func encode(posts []Post) *alfred.Result {
+func toAlfredResult(posts []Post) string {
 	result := new(alfred.Result)
 
 	for _, v := range posts {
-		result.Add(alfred.Item{
-			Id:     strconv.Itoa(v.Id),
-			Title:  v.Title,
-			UserId: strconv.Itoa(v.UserId),
-		})
+		item := alfred.Item{
+			Title:    strconv.Itoa(v.Id),
+			Subtitle: v.Title,
+			Arg:      strconv.Itoa(v.UserId),
+		}
+
+		result.Add(&item)
 	}
 
-	return result
+	return result.Output()
 
 }
 
 func main() {
-
 	r, err := http.Get("https://jsonplaceholder.typicode.com/posts")
 	if err != nil {
 		panic(err.Error())
@@ -46,7 +46,5 @@ func main() {
 		panic(err.Error())
 	}
 
-	result := encode(res)
-
-	fmt.Print(result)
+	fmt.Print(toAlfredResult(res))
 }
