@@ -14,14 +14,18 @@ type Post struct {
 	Title  string
 }
 
-func encode(posts []Post) alfred.Result {
-	items := []alfred.Item{}
+func encode(posts []Post) *alfred.Result {
+	result := new(alfred.Result)
 
 	for _, v := range posts {
-		items = append(items, alfred.Item{strconv.Itoa(v.Id), v.Title, strconv.Itoa(v.UserId)})
+		result.Add(alfred.Item{
+			Id:     strconv.Itoa(v.Id),
+			Title:  v.Title,
+			UserId: strconv.Itoa(v.UserId),
+		})
 	}
 
-	return alfred.Result{Items: items}
+	return result
 
 }
 
@@ -42,12 +46,7 @@ func main() {
 		panic(err.Error())
 	}
 
-	test := encode(res)
+	result := encode(res)
 
-	b, err := json.Marshal(test)
-	if err != nil {
-		fmt.Println("error:", err)
-	}
-
-	os.Stdout.Write(b)
+	fmt.Print(result)
 }
