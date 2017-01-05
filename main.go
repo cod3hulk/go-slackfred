@@ -5,6 +5,7 @@ import "./alfred"
 //import "encoding/json"
 import "fmt"
 import "github.com/nlopes/slack"
+import "os"
 
 //import "net/http"
 //import "strconv"
@@ -32,14 +33,24 @@ func toAlfredResult(users []slack.User) string {
 
 }
 
-func main() {
-	api := slack.New("YOUR_API_KEY")
-
-	users, err := api.GetUsers()
-	if err != nil {
-		fmt.Printf("%s\n", err)
-		return
+func filter(users []slack.User, query string, f func(slack.User, string) bool) []slack.User {
+	filtered := make([]slack.User, 0)
+	for _, user := range users {
+		if f(user, query) {
+			filtered = append(filtered, user)
+		}
 	}
+	return filtered
+}
+
+func main() {
+	//api := slack.New("YOUR_API_KEY")
+
+	//users, err := api.GetUsers()
+	//if err != nil {
+	//fmt.Printf("%s\n", err)
+	//return
+	//}
 	//for _, user := range users {
 	//fmt.Printf("ID: %s, Name: %s, RealName: %s\n", user.ID, user.Name, user.RealName)
 	//}
@@ -51,5 +62,24 @@ func main() {
 
 	//defer r.Body.Close()
 
-	fmt.Print(toAlfredResult(users))
+	users := []slack.User{
+		slack.User{
+			Name:     "b.marley",
+			RealName: "Bob Marley",
+		},
+		slack.User{
+			Name:     "j.doe",
+			RealName: "John Doe",
+		},
+		slack.User{
+			Name:     "m.saunders",
+			RealName: "Matthew Saunders",
+		},
+	}
+
+	filteredUsers := filter(users, os.Args[1], func(user slack.User, query string) bool {
+		return user.Name == query
+	})
+
+	fmt.Print(toAlfredResult(filteredUsers))
 }
