@@ -1,10 +1,13 @@
 package main
 
 import "./alfred"
-import "encoding/json"
+
+//import "encoding/json"
 import "fmt"
-import "net/http"
-import "strconv"
+import "github.com/nlopes/slack"
+
+//import "net/http"
+//import "strconv"
 
 type Post struct {
 	UserId int
@@ -12,14 +15,14 @@ type Post struct {
 	Title  string
 }
 
-func toAlfredResult(posts []Post) string {
+func toAlfredResult(users []slack.User) string {
 	result := new(alfred.Result)
 
-	for _, v := range posts {
+	for _, user := range users {
 		item := alfred.Item{
-			Title:    strconv.Itoa(v.Id),
-			Subtitle: v.Title,
-			Arg:      strconv.Itoa(v.UserId),
+			Title:    user.Name,
+			Subtitle: user.RealName,
+			Arg:      user.Name,
 		}
 
 		result.Add(&item)
@@ -30,20 +33,23 @@ func toAlfredResult(posts []Post) string {
 }
 
 func main() {
-	r, err := http.Get("https://jsonplaceholder.typicode.com/posts")
+	api := slack.New("YOUR_API_KEY")
+
+	users, err := api.GetUsers()
 	if err != nil {
-		panic(err.Error())
+		fmt.Printf("%s\n", err)
+		return
 	}
+	//for _, user := range users {
+	//fmt.Printf("ID: %s, Name: %s, RealName: %s\n", user.ID, user.Name, user.RealName)
+	//}
 
-	defer r.Body.Close()
+	//r, err := http.Get("https://jsonplaceholder.typicode.com/posts")
+	//if err != nil {
+	//panic(err.Error())
+	//}
 
-	decoder := json.NewDecoder(r.Body)
-	res := make([]Post, 0)
+	//defer r.Body.Close()
 
-	err = decoder.Decode(&res)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	fmt.Print(toAlfredResult(res))
+	fmt.Print(toAlfredResult(users))
 }
