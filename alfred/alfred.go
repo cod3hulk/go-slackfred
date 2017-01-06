@@ -21,6 +21,25 @@ func (r *Result) Add(item *Item) *Result {
 	return r
 }
 
+func (r *Result) AddAll(items []Item) *Result {
+	r.Items = append(r.Items, items...)
+
+	return r
+}
+
+func (r *Result) Filter(query string, f func(Item, string) bool) *Result {
+	items := make([]Item, 0)
+	for _, item := range r.Items {
+		if f(item, query) {
+			items = append(items, item)
+		}
+	}
+
+	r.Items = items
+
+	return r
+}
+
 func (r *Result) Output() string {
 	output, err := json.Marshal(*r)
 

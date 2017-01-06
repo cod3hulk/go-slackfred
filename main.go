@@ -2,24 +2,14 @@ package main
 
 import "./alfred"
 
-//import "encoding/json"
 import "fmt"
 import "github.com/nlopes/slack"
 import "github.com/renstrom/fuzzysearch/fuzzy"
 import "os"
 import "strings"
 
-//import "net/http"
-//import "strconv"
-
-type Post struct {
-	UserId int
-	Id     int
-	Title  string
-}
-
-func toAlfredResult(users []slack.User) string {
-	result := new(alfred.Result)
+func toAlfredItems(users []slack.User) []alfred.Item {
+	items := make([]alfred.Item, 0)
 
 	for _, user := range users {
 		item := alfred.Item{
@@ -27,22 +17,10 @@ func toAlfredResult(users []slack.User) string {
 			Subtitle: user.RealName,
 			Arg:      user.Name,
 		}
-
-		result.Add(&item)
+		items = append(items, item)
 	}
 
-	return result.Output()
-
-}
-
-func filter(users []slack.User, query string, f func(slack.User, string) bool) []slack.User {
-	filtered := make([]slack.User, 0)
-	for _, user := range users {
-		if f(user, query) {
-			filtered = append(filtered, user)
-		}
-	}
-	return filtered
+	return items
 }
 
 func main() {
@@ -54,29 +32,15 @@ func main() {
 		return
 	}
 
-	//users := []slack.User{
-	//slack.User{
-	//Name:     "b.marley",
-	//RealName: "Bob Marley",
-	//},
-	//slack.User{
-	//Name:     "j.doe",
-	//RealName: "John Doe",
-	//},
-	//slack.User{
-	//Name:     "m.saunders",
-	//RealName: "Matthew Saunders",
-	//},
-	//}
+	result := new(alfred.Result)
+	result.AddAll(toAlfredItems(users))
 
-	filterFunc := func(user slack.User, query string) bool {
+	result.Filter(os.Args[2], func(item alfred.Item, query string) bool {
 		query = strings.ToLower(query)
-		name := strings.ToLower(user.Name)
-		realName := strings.ToLower(user.RealName)
-		return fuzzy.Match(query, name) || fuzzy.Match(query, realName)
-	}
+		arg := strings.ToLower(item.Arg)
+		subtitle := strings.ToLower(item.Subtitle)
+		return fuzzy.Match(query, arg) || fuzzy.Match(query, subtitle)
+	})
 
-	filteredUsers := filter(users, os.Args[2], filterFunc)
-
-	fmt.Print(toAlfredResult(filteredUsers))
+	fmt.Print(result.Output())
 }
