@@ -5,7 +5,9 @@ import "./alfred"
 //import "encoding/json"
 import "fmt"
 import "github.com/nlopes/slack"
+import "github.com/renstrom/fuzzysearch/fuzzy"
 import "os"
+import "strings"
 
 //import "net/http"
 //import "strconv"
@@ -44,42 +46,37 @@ func filter(users []slack.User, query string, f func(slack.User, string) bool) [
 }
 
 func main() {
-	//api := slack.New("YOUR_API_KEY")
+	api := slack.New(os.Args[1])
 
-	//users, err := api.GetUsers()
-	//if err != nil {
-	//fmt.Printf("%s\n", err)
-	//return
-	//}
-	//for _, user := range users {
-	//fmt.Printf("ID: %s, Name: %s, RealName: %s\n", user.ID, user.Name, user.RealName)
-	//}
-
-	//r, err := http.Get("https://jsonplaceholder.typicode.com/posts")
-	//if err != nil {
-	//panic(err.Error())
-	//}
-
-	//defer r.Body.Close()
-
-	users := []slack.User{
-		slack.User{
-			Name:     "b.marley",
-			RealName: "Bob Marley",
-		},
-		slack.User{
-			Name:     "j.doe",
-			RealName: "John Doe",
-		},
-		slack.User{
-			Name:     "m.saunders",
-			RealName: "Matthew Saunders",
-		},
+	users, err := api.GetUsers()
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return
 	}
 
-	filteredUsers := filter(users, os.Args[1], func(user slack.User, query string) bool {
-		return user.Name == query
-	})
+	//users := []slack.User{
+	//slack.User{
+	//Name:     "b.marley",
+	//RealName: "Bob Marley",
+	//},
+	//slack.User{
+	//Name:     "j.doe",
+	//RealName: "John Doe",
+	//},
+	//slack.User{
+	//Name:     "m.saunders",
+	//RealName: "Matthew Saunders",
+	//},
+	//}
+
+	filterFunc := func(user slack.User, query string) bool {
+		query = strings.ToLower(query)
+		name := strings.ToLower(user.Name)
+		realName := strings.ToLower(user.RealName)
+		return fuzzy.Match(query, name) || fuzzy.Match(query, realName)
+	}
+
+	filteredUsers := filter(users, os.Args[2], filterFunc)
 
 	fmt.Print(toAlfredResult(filteredUsers))
 }
