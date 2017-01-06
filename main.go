@@ -32,15 +32,12 @@ func main() {
 		return
 	}
 
-	result := new(alfred.Result)
-	result.AddAll(toAlfredItems(users))
-
-	result.Filter(os.Args[2], func(item alfred.Item, query string) bool {
+	result := new(alfred.Result).AddAll(toAlfredItems(users)).Filter(os.Args[2], func(item alfred.Item, query string) bool {
 		query = strings.ToLower(query)
 		arg := strings.ToLower(item.Arg)
 		subtitle := strings.ToLower(item.Subtitle)
 		return fuzzy.Match(query, arg) || fuzzy.Match(query, subtitle)
-	})
+	}).Output()
 
-	fmt.Print(result.Output())
+	fmt.Print(result)
 }
