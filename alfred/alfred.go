@@ -27,6 +27,16 @@ func (r *Result) AddAll(items []Item) *Result {
 	return r
 }
 
+func (r *Result) AddChannel(items chan Item, query string, f func(Item, string) bool) *Result {
+	for item := range items {
+		if f(item, query) {
+			r.Items = append(r.Items, item)
+		}
+	}
+
+	return r
+}
+
 func (r *Result) Filter(query string, f func(Item, string) bool) *Result {
 	items := make([]Item, 0)
 	for _, item := range r.Items {

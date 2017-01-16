@@ -7,56 +7,11 @@ import "github.com/nlopes/slack"
 import "github.com/renstrom/fuzzysearch/fuzzy"
 import "os"
 import "strings"
+import "sync"
 
-func usersToAlfredItems(users []slack.User) []alfred.Item {
-	items := make([]alfred.Item, 0)
-
-	for _, user := range users {
-		item := alfred.Item{
-			Title:    user.Name,
-			Subtitle: user.RealName,
-			Arg:      user.Name,
-		}
-		items = append(items, item)
-	}
-
-	return items
-}
-
-func groupsToAlfredItems(groups []slack.Group) []alfred.Item {
-	items := make([]alfred.Item, 0)
-
-	for _, group := range groups {
-		if !strings.HasPrefix(group.Name, "mpdm") {
-			item := alfred.Item{
-				Title:    group.Name,
-				Subtitle: "Group",
-				Arg:      group.Name,
-			}
-			items = append(items, item)
-		}
-	}
-
-	return items
-}
-
-func channelsToAlfredItems(channels []slack.Channel) []alfred.Item {
-	items := make([]alfred.Item, 0)
-
-	for _, channel := range channels {
-		item := alfred.Item{
-			Title:    channel.Name,
-			Subtitle: "Channel",
-			Arg:      channel.Name,
-		}
-		items = append(items, item)
-	}
-
-	return items
-}
-
-func main() {
-	api := slack.New(os.Args[1])
+func users(apiToken string, items chan alfred.Item, wg *sync.WaitGroup) {
+	defer wg.Done()
+	api := slack.New(apiToken)
 
 	users, err := api.GetUsers()
 	if err != nil {
@@ -64,11 +19,39 @@ func main() {
 		return
 	}
 
+	for _, user := range users {
+		items <- alfred.Item{
+			Title:    user.Name,
+			Subtitle: user.RealName,
+			Arg:      user.Name,
+		}
+	}
+
+}
+
+func channels(apiToken string, items chan alfred.Item, wg *sync.WaitGroup) {
+	defer wg.Done()
+	api := slack.New(apiToken)
+
 	channels, err := api.GetChannels(true)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return
 	}
+
+	for _, channel := range channels {
+		items <- alfred.Item{
+			Title:    channel.Name,
+			Subtitle: "Channel",
+			Arg:      channel.Name,
+		}
+	}
+
+}
+
+func groups(apiToken string, items chan alfred.Item, wg *sync.WaitGroup) {
+	defer wg.Done()
+	api := slack.New(apiToken)
 
 	groups, err := api.GetGroups(true)
 	if err != nil {
@@ -76,16 +59,38 @@ func main() {
 		return
 	}
 
-	result := new(alfred.Result).
-		AddAll(usersToAlfredItems(users)).
-		AddAll(channelsToAlfredItems(channels)).
-		AddAll(groupsToAlfredItems(groups)).
-		Filter(os.Args[2], func(item alfred.Item, query string) bool {
-			query = strings.ToLower(query)
-			arg := strings.ToLower(item.Arg)
-			subtitle := strings.ToLower(item.Subtitle)
-			return fuzzy.Match(query, arg) || fuzzy.Match(query, subtitle)
-		}).Output()
+	for _, group := range groups {
+		if !strings.HasPrefix(group.Name, "mpdm") {
+			items <- alfred.Item{
+				Title:    group.Name,
+				Subtitle: "Group",
+				Arg:      group.Name,
+			}
+		}
+	}
 
-	fmt.Print(result)
+}
+
+func main() {
+	items := make(chan alfred.Item)
+	var wg sync.WaitGroup
+
+	result := new(alfred.Result)
+
+	go result.AddChannel(items, os.Args[2], func(item alfred.Item, query string) bool {
+		query = strings.ToLower(query)
+		arg := strings.ToLower(item.Arg)
+		subtitle := strings.ToLower(item.Subtitle)
+		return fuzzy.Match(query, arg) || fuzzy.Match(query, subtitle)
+	})
+
+	wg.Add(3)
+	go users(os.Args[1], items, &wg)
+	go groups(os.Args[1], items, &wg)
+	go channels(os.Args[1], items, &wg)
+
+	wg.Wait()
+	close(items)
+
+	fmt.Print(result.Output())
 }
