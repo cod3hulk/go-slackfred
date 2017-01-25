@@ -1,6 +1,6 @@
 package main
 
-import "./alfred"
+import "github.com/cod3hulk/go-slackfred/alfred"
 
 import "fmt"
 import "github.com/nlopes/slack"
