@@ -3,4 +3,3 @@ Alfred workflow for Slack powered by golang
 
 ## WIP
 
-## TEST
