@@ -71,18 +71,24 @@ func groups(apiToken string, items chan alfred.Item, wg *sync.WaitGroup) {
 
 }
 
+func filterItem(item alfred.Item, query string) bool {
+	query = strings.ToLower(query)
+	arg := strings.ToLower(item.Arg)
+	subtitle := strings.ToLower(item.Subtitle)
+	return fuzzy.Match(query, arg) || fuzzy.Match(query, subtitle)
+}
+
 func main() {
 	items := make(chan alfred.Item)
 	var wg sync.WaitGroup
 
 	result := new(alfred.Result)
 
-	go result.AddChannel(items, os.Args[2], func(item alfred.Item, query string) bool {
-		query = strings.ToLower(query)
-		arg := strings.ToLower(item.Arg)
-		subtitle := strings.ToLower(item.Subtitle)
-		return fuzzy.Match(query, arg) || fuzzy.Match(query, subtitle)
-	})
+	go func(items chan alfred.Item, result *alfred.Result) {
+		for item := range items {
+			result.Add(&item)
+		}
+	}(items, result)
 
 	wg.Add(3)
 	go users(os.Args[1], items, &wg)
@@ -92,5 +98,5 @@ func main() {
 	wg.Wait()
 	close(items)
 
-	fmt.Print(result.Output())
+	fmt.Print(result.Filter(os.Args[2], filterItem).Output())
 }
